@@ -1,0 +1,22 @@
+[workspace]
+authors = ["Johannes Koester <johannes.koester@uni-due.de>"]
+channels = ["conda-forge"]
+name = "snakemake-deploy-webapp"
+platforms = ["linux-64", "osx-arm64"]
+version = "0.1.0"
+
+[dependencies]
+python = ">=3.13,<3.14"
+streamlit = ">=1.55,<2"
+pyyaml = ">=6,<7"
+jsonschema = ">=4,<5"
+pytest = ">=8,<9"
+polars = ">=2,<3"
+
+[pypi-dependencies]
+snakelit = ">=0.1.0,<1"
+
+[tasks]
+test = "pytest tests tests_ui -v"
+build = "python scripts/build.py"
+serve = "python scripts/serve.py"

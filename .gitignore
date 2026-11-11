@@ -1,0 +1,23 @@
+# pixi
+.pixi/*
+!.pixi/config.toml
+
+# build output
+dist/
+
+# local Streamlit bootstrap
+bootstrap.json
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+!*.py
+!*.html
+!*.toml
+!*.lock
+!.gitignore
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
