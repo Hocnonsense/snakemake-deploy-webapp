@@ -1,7 +1,9 @@
 # Snakemake deploy webapp
 
 A static [stlite](https://github.com/whitphx/stlite) app that deploys a Snakemake workflow from the catalog into a new GitHub repository, lets the user edit its configuration, and pushes the result.
-It needs no server: Streamlit runs in the browser via WebAssembly, and GitHub is accessed with a personal access token that stays in `st.session_state`.
+Streamlit runs in the browser via WebAssembly. GitHub can be accessed either
+through GitHub OAuth (recommended) or, as a fallback, with a personal access
+token that stays in `st.session_state`.
 
 The catalog links here with:
 

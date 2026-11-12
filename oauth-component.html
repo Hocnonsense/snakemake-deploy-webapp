@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+      #root {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .status {
+        font-size: 0.8rem;
+        opacity: 0.75;
+        text-align: center;
+      }
+      button {
+        width: 100%;
+        padding: 0.35rem 0.75rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+      }
+      button svg {
+        flex: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      const TOKEN_KEY = "snakelit-gh-token";
+      const STATE_KEY = "snakelit-gh-state";
+      let args = {};
+      let theme = {};
+      let sent = false;
+      let logoutSent = false;
+
+      const post = (type, data = {}) =>
+        window.parent.postMessage({ isStreamlitMessage: true, type, ...data }, "*");
+
+      function applyTheme() {
+        document.body.style.fontFamily = theme.font || "sans-serif";
+      }
+
+      const GITHUB_ICON = `
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"
+             aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+        </svg>`;
+
+      function button(label, onClick, withIcon = false) {
+        const element = document.createElement("button");
+        const dark = theme.base === "dark";
+        element.style.background = dark ? "#f0f6fc" : "#24292f";
+        element.style.color = dark ? "#24292f" : "#ffffff";
+        element.style.border = "1px solid transparent";
+        if (withIcon) {
+          element.insertAdjacentHTML("beforeend", GITHUB_ICON);
+        }
+        const text = document.createElement("span");
+        text.textContent = label;
+        element.append(text);
+        element.addEventListener("click", onClick);
+        return element;
+      }
+
+      function render() {
+        applyTheme();
+        const root = document.getElementById("root");
+        root.replaceChildren();
+
+        if (!args.authed && !args.oauth_origin) {
+          const note = document.createElement("div");
+          note.className = "status";
+          note.textContent = "GitHub OAuth is not configured.";
+          note.style.color = theme.textColor || "#31333F";
+          root.append(note);
+        } else if (args.authed) {
+          // The native Streamlit button owns the visible sign-out control;
+          // this iframe only clears the browser-side token when asked to.
+          if (args.logout && !logoutSent) {
+            logoutSent = true;
+            sessionStorage.removeItem(TOKEN_KEY);
+            sessionStorage.removeItem(STATE_KEY);
+            post("streamlit:setComponentValue", {
+              value: { event: "logout" },
+            });
+          }
+          if (!args.logout) {
+            logoutSent = false;
+          }
+        } else {
+          root.append(
+            button("Sign in with GitHub", () => {
+              const state = crypto.randomUUID();
+              sessionStorage.setItem(STATE_KEY, state);
+              window.open(
+                `${args.oauth_origin}/api/start?state=${encodeURIComponent(state)}` +
+                  `&origin=${encodeURIComponent(location.origin)}`,
+                "github-oauth",
+                "popup,width=640,height=760",
+              );
+            }, true),
+          );
+        }
+
+        post("streamlit:setFrameHeight", {
+          height: Math.ceil(document.body.getBoundingClientRect().height) + 2,
+        });
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "streamlit:render") {
+          args = event.data.args || {};
+          theme = event.data.theme || {};
+          if (!args.authed && !sent) {
+            const token = sessionStorage.getItem(TOKEN_KEY);
+            if (token) {
+              sent = true;
+              post("streamlit:setComponentValue", {
+                value: { event: "login", token },
+              });
+            }
+          }
+          render();
+          return;
+        }
+
+        if (!args.oauth_origin || event.origin !== args.oauth_origin) return;
+        if (!event.data || event.data.state !== sessionStorage.getItem(STATE_KEY)) {
+          return;
+        }
+        sessionStorage.removeItem(STATE_KEY);
+        sessionStorage.setItem(TOKEN_KEY, event.data.token);
+        sent = true;
+        post("streamlit:setComponentValue", {
+          value: { event: "login", token: event.data.token },
+        });
+      });
+
+      post("streamlit:componentReady", { apiVersion: 1 });
+      render();
+    </script>
+  </body>
+</html>
