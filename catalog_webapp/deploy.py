@@ -9,7 +9,7 @@ The output must stay compatible with snakedeploy 0.11.x.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Mapping
 
 from snakelit.types import Ref
 from .fs import DeploymentFS
@@ -141,6 +141,18 @@ class Schemas:
                 path = f"{prefix}{item}.schema.{ext}"
                 if path in self.schemas:
                     return path
+
+    def infer(self, file: str):
+        """Return the schema for ``file`` from its stem, when that is safe.
+
+        Profile files are Snakemake profiles, not workflow configs, so a
+        ``profiles/.../config.yaml`` must not inherit the workflow's config
+        schema.  Users can still choose one explicitly.
+        """
+        if file.startswith("profiles/"):
+            return None
+        item = file.rsplit("/", 1)[-1].split(".", 1)[0]
+        return self.find(item)
 
     def get(self, path: str):
         return self.schemas[path]

@@ -99,6 +99,13 @@ def app_with_broken_config(tmp_path, monkeypatch):
     return _start(tmp_path, monkeypatch, files)
 
 
+@pytest.fixture
+def app_without_schema(tmp_path, monkeypatch):
+    files = dict(FILES)
+    del files["workflow/schemas/config.schema.yaml"]
+    return _start(tmp_path, monkeypatch, files)
+
+
 def test_shows_repo_and_ref(app):
     assert not app.exception, [str(error.value) for error in app.exception]
 
@@ -151,14 +158,35 @@ def test_deploy_lists_downloaded_files(app):
     assert "Snakefile" in [item.label for item in app.button]
 
 
-def test_deploy_selects_the_upstream_schema(app):
+def test_deploy_uses_the_config_schema_without_a_selector(app):
     next(item for item in app.button if item.label == "Deploy").click()
     app.run()
 
-    selector = next(
-        item for item in app.selectbox if item.key and item.key.endswith("-schema")
+    assert not [
+        item for item in app.selectbox if item.key and item.key.startswith("config-")
+    ]
+    header = next(
+        item.label for item in app.radio if item.key and item.key.startswith("config-")
     )
-    assert selector.value == "workflow/schemas/config.schema.yaml"
+    assert header.endswith("with schema")
+    assert any(item.key and item.key.endswith("-samples") for item in app.text_input)
+
+
+def test_config_without_a_schema_has_no_selector(app_without_schema):
+    next(item for item in app_without_schema.button if item.label == "Deploy").click()
+    app_without_schema.run()
+
+    assert not [
+        item
+        for item in app_without_schema.selectbox
+        if item.key and item.key.startswith("config-")
+    ]
+    header = next(
+        item.label
+        for item in app_without_schema.radio
+        if item.key and item.key.startswith("config-")
+    )
+    assert header.endswith("without schema")
 
 
 def test_editing_config_writes_an_override(app):
