@@ -14,7 +14,7 @@ pytest = ">=8,<9"
 polars = ">=2,<3"
 
 [pypi-dependencies]
-snakelit = ">=0.1.1,<1"
+snakelit = ">=0.1.2,<1"
 
 [tasks]
 test = "pytest tests tests_ui -v"
