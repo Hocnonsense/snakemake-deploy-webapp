@@ -182,7 +182,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/uvicorn-0.54.0-pyh53cf698_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.2-pyh5ded981_0.conda
-      - pypi: https://files.pythonhosted.org/packages/ec/03/d383f17b7c824643d14e34c786561784e1ed326a78a7fe06f0a273362e49/snakelit-0.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/48/96/c1d6bec540f4053e8fd6b6b074c7e9643a660e02f5eaf4898c1b02cc4b6c/snakelit-0.1.1-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/altair-6.3.0-pyh5ded981_0.conda
@@ -351,7 +351,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-h31dac16_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
-      - pypi: https://files.pythonhosted.org/packages/ec/03/d383f17b7c824643d14e34c786561784e1ed326a78a7fe06f0a273362e49/snakelit-0.1.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/48/96/c1d6bec540f4053e8fd6b6b074c7e9643a660e02f5eaf4898c1b02cc4b6c/snakelit-0.1.1-py3-none-any.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   build_number: 20
@@ -5069,10 +5069,10 @@ packages:
     - zstd >=1.5.7,<1.6.0a0
   size: 433687
   timestamp: 1786599629846
-- pypi: https://files.pythonhosted.org/packages/ec/03/d383f17b7c824643d14e34c786561784e1ed326a78a7fe06f0a273362e49/snakelit-0.1.0-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/48/96/c1d6bec540f4053e8fd6b6b074c7e9643a660e02f5eaf4898c1b02cc4b6c/snakelit-0.1.1-py3-none-any.whl
   name: snakelit
-  version: 0.1.0
-  sha256: 26efe2e4381d1482ad13e1f782e2af83afef8c0b16b30b275ad8b4c50c8b1081
+  version: 0.1.1
+  sha256: 29e553e7530e6e8818d9c271692880aa2b01ffc566e575e44a36f34ba90e0882
   requires_dist:
   - jsonschema>=4,<5
   - pyyaml>=6,<7
