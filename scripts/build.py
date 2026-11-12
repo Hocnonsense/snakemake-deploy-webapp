@@ -33,6 +33,7 @@ def build():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
     shutil.copy2(ROOT / "index.html", DIST / "index.html")
+    shutil.copy2(ROOT / "oauth-component.html", DIST / "oauth-component.html")
 
     entries = sorted(python_files(), key=lambda entry: entry[1])
     for source, relative in entries:

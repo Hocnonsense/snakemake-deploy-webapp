@@ -48,7 +48,12 @@ else:
 
 
 with st.sidebar:
-    gh = GitHub(render_auth())
+    gh = GitHub(
+        render_auth(
+            oauth_origin=bootstrap.get("oauth_origin", ""),
+            oauth_component=bootstrap.get("oauth_component", ""),
+        )
+    )
 
 
 auth = "auth" if gh.token else "anon"
