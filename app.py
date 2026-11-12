@@ -7,14 +7,17 @@ from functools import partial
 
 import streamlit as st
 
+from snakelit.editor.config import schema_config
 from snakelit.types import Ref
 from snakelit.version_picker import version_picker
 from snakelit.edit import edit_for
 from snakelit.file_explorer import FileExplorer
+from snakelit.filetypes import suffix
 from snakelit.merge import diff_files, render_merge
 from snakelit.utils.zip import ArchiveError, unzip, zipped
 from catalog_webapp.auth import render_auth
 from catalog_webapp.deploy import DeployError, deploy
+from catalog_webapp.editor import select_schema_edit
 from catalog_webapp.fs import DeploymentFS
 from catalog_webapp.github import GitHub, GitHubError
 from catalog_webapp.publish import publish_form
@@ -129,7 +132,17 @@ explorer = result["explorer"]
 fs: DeploymentFS = explorer.store
 explorer.render(header="Browse deployed files")
 
-edit_for(fs.config_file(), fs, key=f"config-{key}", editors=fs.editors)
+config = fs.config_file()
+config_suffix = suffix(config)
+config_format = "yaml" if config_suffix == "yml" else config_suffix
+schema_path = fs.schemas.infer(config)
+config_editor = select_schema_edit(
+    config_format,
+    schema_config,
+    fs.schemas.get(schema_path) if schema_path else None,
+    edit_file=partial(explorer.change_preview, args=("edit",)),
+)
+edit_for(config, fs, key=f"config-{key}", editors={config_suffix: config_editor})
 
 st.divider()
 download_col, publish_col = [i.empty() for i in st.columns(2)]

@@ -116,7 +116,9 @@
         }
 
         post("streamlit:setFrameHeight", {
-          height: Math.ceil(document.body.getBoundingClientRect().height) + 2,
+          height: args.authed
+            ? 0
+            : Math.ceil(document.body.getBoundingClientRect().height) + 2,
         });
       }
 

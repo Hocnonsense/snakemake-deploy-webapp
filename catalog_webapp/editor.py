@@ -1,7 +1,7 @@
 """Config editing glue for the stlite app.
 
-``select_schema_edit`` wraps ``snakelit.editor.config.schema_config`` with the schema
-selector and error reporting the browser app needs.
+``select_schema_edit`` wraps ``snakelit.editor.config.schema_config`` with the
+schema selector and error reporting the browser app needs.
 """
 
 from __future__ import annotations
@@ -16,23 +16,29 @@ from .deploy import Schemas
 
 
 def select_schema_edit(
-    schemas: Schemas,
-    schema_edit: Callable,
-    language: str,
-    default_schema: str | None = None,
-    **options,
+    language: str, schema_edit: Callable, schemas: Schemas | bytes | None, **options
 ):
+    """Wrap ``schema_edit`` with a workflow schema.
+
+    ``schemas`` is either a :class:`Schemas` registry (infer a default and
+    render a selector), the raw bytes of a fixed schema (no selector), or
+    ``None`` (edit without a schema, also without a selector).
+    """
+
     def config_edit(path: str, data: bytes, key: str):
         errors: list[str] = []
         header = f"Editing `{path}`"
         schema = None
-        if schemas:
-            content = _choose_schema(schemas, path, default_schema, key)
-            if content:
-                schema, error = _parse_schema(content)
-                if error is not None:
-                    errors.append(error)
-            header += " with schema" if schema else " without schema"
+        content = (
+            _choose_schema(schemas, path, key)
+            if isinstance(schemas, Schemas)
+            else schemas
+        )
+        if content:
+            schema, error = _parse_schema(content)
+            if error is not None:
+                errors.append(error)
+        header += " with schema" if schema else " without schema"
         updated = schema_edit(
             data,
             errors,
@@ -62,20 +68,13 @@ def _parse_schema(content: bytes):
     return schema, None
 
 
-def _choose_schema(
-    schemas: Schemas,
-    file: str,
-    default_schema: str | None,
-    key: str,
-):
+def _choose_schema(schemas: Schemas, file: str, key: str):
     """Render the read-only schema selector; return the raw schema content."""
     paths = sorted(schemas.schemas)
     if not paths:  # noqa
         return
 
-    if default_schema is None:
-        item = file.rsplit("/", 1)[-1].split(".", 1)[0]
-        default_schema = schemas.find(item)
+    default_schema = schemas.infer(file)
     index = 1 + paths.index(default_schema) if default_schema in paths else 0
 
     choice = st.selectbox(

@@ -22,15 +22,15 @@ class DeploymentFS(FileStore):
 
         self.editors = {
             "yaml": select_schema_edit(
-                self.schemas, schema_config, "yaml", edit_file=edit_file
+                "yaml", schema_config, self.schemas, edit_file=edit_file
             ),
             "json": select_schema_edit(
-                self.schemas, schema_config, "json", edit_file=edit_file
+                "json", schema_config, self.schemas, edit_file=edit_file
             ),
-            "csv": select_schema_edit(self.schemas, schema_table, "csv"),
-            "tsv": select_schema_edit(self.schemas, schema_table, "tsv"),
-            "parquet": select_schema_edit(self.schemas, schema_table, "parquet"),
-            "xlsx": select_schema_edit(self.schemas, schema_table, "xlsx"),
+            "csv": select_schema_edit("csv", schema_table, self.schemas),
+            "tsv": select_schema_edit("tsv", schema_table, self.schemas),
+            "parquet": select_schema_edit("parquet", schema_table, self.schemas),
+            "xlsx": select_schema_edit("xlsx", schema_table, self.schemas),
         }
         self.editors["yml"] = self.editors["yaml"]
 

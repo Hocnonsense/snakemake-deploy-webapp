@@ -12,6 +12,15 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@stlite/browser@1.12.1/build/stlite.css"
     />
+    <style>
+      /* Custom components are rendered in iframes with the browser default
+         inset border.  Remove it so the sidebar control matches Streamlit. */
+      iframe[data-testid="stCustomComponentV1"],
+      iframe[title$="snakelit_github_oauth"] {
+        border: 0 !important;
+        outline: none !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root">
