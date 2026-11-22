@@ -503,3 +503,50 @@ def test_cancel_comparison_clears_the_merge(app, monkeypatch):
     assert not app.exception
     assert "merge" not in app.session_state
     assert not [item for item in app.button if item.label == "Apply"]
+
+
+def test_direct_entry_only_loads_refs_after_a_valid_repository(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    requested = []
+
+    def load_refs(self, repo):
+        def load(kind):
+            requested.append(repo)
+            yield from _load(kind)
+
+        return load
+
+    monkeypatch.setattr(GitHub, "repo_ref_cache", load_refs)
+    at = AppTest.from_file(str(APP)).run()
+    assert not at.exception and not at.error
+    assert requested == []
+    at.text_input(key="workflow-url").set_value("https://example.org/owner/wf").run()
+    assert at.error and requested == []
+    at.text_input(key="workflow-url").set_value("https://github.com/owner/wf.git").run()
+    assert not at.exception and not at.error
+    assert requested == ["owner/wf"]
+    assert at.button(key="deploy")
+    picker = at.selectbox(key="workflow-source")
+    assert picker.value == "owner/wf"
+    assert picker.options.count("owner/wf") == 1
+    assert all(field.key != "workflow-url" for field in at.text_input)
+    picker.set_value("Enter repository URL").run()
+    assert at.text_input(key="workflow-url").value == ""
+    at.text_input(key="workflow-url").set_value("owner/wf").run()
+    assert at.selectbox(key="workflow-source").value == "owner/wf"
+    assert at.selectbox(key="workflow-source").options.count("owner/wf") == 1
+
+def test_manual_repo_selection_keeps_catalog_ref_scoped(app, monkeypatch):
+    def refs(self, repo):
+        if repo == "owner/wf":
+            return _load
+        return lambda kind: [Ref("branch", "main", "bbbbbbb")] if kind == "branch" else []
+
+    monkeypatch.setattr(GitHub, "repo_ref_cache", refs)
+    app.selectbox(key="workflow-source").set_value("Enter repository URL").run()
+    app.text_input(key="workflow-url").set_value("owner/second").run()
+    assert not app.exception and not app.error
+    assert app.selectbox(key="workflow-source").value == "owner/second"
+    assert app.button(key="ref-picker-owner/second-anon-kind-branch").label.startswith("main")
+    app.selectbox(key="workflow-source").set_value("owner/wf").run()
+    assert app.button(key="ref-picker-owner/wf-anon-kind-tag").label.startswith("v1.0")

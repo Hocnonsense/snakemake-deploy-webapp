@@ -10,13 +10,16 @@ The catalog links here with:
 https://<host>/<repo>/?repo=<owner>/<name>&ref=<tag-or-branch>
 ```
 
+The app also opens without query parameters. Enter a GitHub repository URL or `owner/name` above the version picker.
+Successfully opened repositories are available in the dropdown for the rest of the browser session. Catalog links preselect the source and apply the linked ref only to that repository.
+
 ## Architecture
 
 - `index.html` mounts stlite and builds `bootstrap.json` from the query string;
 - `oauth-component.html` render the OAuth control;
 - `app.py` is the Streamlit entrypoint;
 - `catalog_webapp/` contains the GitHub client, deployment, editing and publishing logic;
-- `snakelit` is consumed from PyPI and copied into the static bundle at build time, so the deployed code uses the same version as the lockfile.
+- The static build copies the locked snakelit package. During development of the repository picker, Pixi uses the wheel in `vendor/`.
 
 `scripts/build.py` writes `dist/` with `index.html`, all Python sources and the
 `files.json` manifest that tells stlite what to mount.
