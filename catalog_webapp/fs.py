@@ -1,14 +1,26 @@
-from typing import TYPE_CHECKING, Mapping
+from dataclasses import dataclass
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Mapping
 
-from snakelit.edit import edit_for
 from snakelit.preview import preview_for
-from snakelit.types import FileStore, Stat
+
+from .editor import edit_for
 
 if TYPE_CHECKING:
     from .deploy import Schemas
 
 
-class DeploymentFS(FileStore):
+@dataclass(frozen=True)
+class Stat:
+    """What the file tree needs to know about a file."""
+
+    size: int
+    mtime: datetime | None = None
+
+
+class DeploymentFS:
+    """Workflow files from the upstream snapshot with local deployment edits."""
+
     def __init__(self, downloaded: Mapping[str, bytes], schemas: "Schemas"):
         self.downloaded = downloaded
         self.schemas = schemas
@@ -50,7 +62,14 @@ class DeploymentFS(FileStore):
             self.overrides[config] = b""
         return config
 
-    # region FileStore interface
+    def collect(self):
+        """Collect the current deployment files for export or publication."""
+        return {
+            path: content
+            for path in sorted(self.paths())
+            if (content := self.read(path)) is not None
+        }
+
     def paths(self, dir=""):
         for path, content in self.overrides.items():
             if path.startswith(dir) and content is not None:
@@ -58,6 +77,20 @@ class DeploymentFS(FileStore):
         for path in self.downloaded.keys() - self.overrides:
             if path.startswith(dir):
                 yield path
+
+    def tree(self):
+        """Nested view of :meth:`paths` for the file manager.
+
+        Directories are the dicts; leaves are the path strings themselves.
+        """
+        tree: dict[str, Any] = {}
+        for path in self.paths():
+            parts = path.split("/")
+            node = tree
+            for part in parts[:-1]:
+                node = node.setdefault(part, {})
+            node[parts[-1]] = path
+        return tree
 
     def stat(self, path):
         content = self.read(path)

@@ -128,11 +128,7 @@ def push_deployment(
 
     ``target_repo`` is ``None`` for a repository that still has to be created.
     """
-    files = {
-        path: content
-        for path in sorted(fs.paths())
-        if (content := fs.read(path)) is not None
-    }
+    files = fs.collect()
     if not files:
         raise PublishError("No files to publish.")
     current = target_repo

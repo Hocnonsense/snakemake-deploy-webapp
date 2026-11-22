@@ -9,18 +9,17 @@ import streamlit as st
 
 from snakelit.editor.config import schema_config
 from snakelit.types import Ref
-from snakelit.version_picker import version_picker
-from snakelit.edit import edit_for
-from snakelit.file_explorer import FileExplorer
+from snakelit.version_picker import repository_picker, version_picker
 from snakelit.filetypes import suffix
 from snakelit.merge import diff_files, render_merge
-from snakelit.utils.zip import ArchiveError, unzip, zipped
+from snakelit.utils import zip as archive
 from catalog_webapp.auth import render_auth
 from catalog_webapp.deploy import DeployError, deploy
-from catalog_webapp.editor import select_schema_edit
+from catalog_webapp.editor import edit_for, select_schema_edit
+from catalog_webapp.file_explorer import FileExplorer
 from catalog_webapp.fs import DeploymentFS
 from catalog_webapp.github import GitHub, GitHubError
-from catalog_webapp.publish import publish_form
+from catalog_webapp.publish import publish_form, repo_name
 from catalog_webapp.stlite import flush_spinner
 
 st.set_page_config(page_title="Deploy a Snakemake workflow", layout="wide")
@@ -35,21 +34,15 @@ def _bootstrap() -> dict:
         return {}
 
 
+def _github_repository(source: str):
+    path = source.strip().rstrip("/")
+    if path.startswith("https://github.com/"):
+        path = path.removeprefix("https://github.com/").removesuffix(".git")
+    if path.rsplit("/", 1)[-1] not in (".", ".."):
+        return repo_name(path)
+
+
 bootstrap = _bootstrap()
-repo: str = bootstrap.get("repo", "")
-ref = bootstrap.get("ref", "")
-
-if repo:
-    st.title(f"Deploy workflow: [`{repo}`](https://github.com/{repo})")
-else:
-    st.error(
-        "No workflow repository was passed in the URL (?repo=owner/name). "
-        "Please access the app through the "
-        "[catalog](https://snakemake.github.io/snakemake-workflow-catalog/)"
-    )
-    st.stop()
-
-
 with st.sidebar:
     gh = GitHub(
         render_auth(
@@ -59,18 +52,55 @@ with st.sidebar:
     )
 
 
+heading = st.container()
+
+initial_source = bootstrap.get("repo", "")
+initial_repo = _github_repository(initial_source)
+repositories = st.session_state.setdefault("workflow-repositories", [])
+# Streamlit permits changing a widget key before its widget is rendered.
+pending = st.session_state.pop("workflow-pending-repository", None)
+if pending is not None:
+    st.session_state["workflow-source"] = pending
+    st.session_state.pop("workflow-url", None)
+    st.session_state.pop("workflow-url-value", None)
+
+source = repository_picker(
+    repositories, initial=initial_repo or initial_source, key="workflow"
+)
+repo = _github_repository(source) if source else None
+with heading:
+    if repo:
+        st.title(f"Deploy workflow: [`{repo}`](https://github.com/{repo})")
+    else:
+        st.title("Deploy workflow")
+
+if not source:
+    st.stop()
+if repo is None:
+    st.error(
+        "Enter a GitHub repository as owner/name or https://github.com/owner/name."
+    )
+    st.stop()
+
 auth = "auth" if gh.token else "anon"
-ref = version_picker(ref, gh.repo_ref_cache(repo), key=f"ref-picker-{repo}-{auth}")
+initial_ref = bootstrap.get("ref") if repo == initial_repo else None
+ref = version_picker(
+    initial_ref, gh.repo_ref_cache(repo), key=f"ref-picker-{repo}-{auth}"
+)
 if ref is None:
     st.stop()
-    raise NotImplementedError("Should stop by st")
+if repo not in repositories:
+    repositories.append(repo)
+if st.session_state["workflow-source"] != repo:
+    st.session_state["workflow-pending-repository"] = repo
+    st.rerun()
 
 
 def start_zip_merge(fs: DeploymentFS, name: str, data: bytes):
     """Compare an uploaded zip with ``fs``; return whether to rerun the page."""
     try:
-        incoming = unzip(data)
-    except ArchiveError as error:
+        incoming = archive.load(data)
+    except archive.ArchiveError as error:
         st.error(str(error))
         return False
     st.session_state["merge"] = (name, diff_files(fs, incoming))
@@ -118,6 +148,7 @@ if st.session_state.get("deploy-error"):
 result = st.session_state.get("deploy-result")
 if not result:
     st.stop()
+    assert False
 key: str = result["key"]
 if key != f"{repo}@{ref.sha}":
     last_ref = key.split("@", 1)[-1]
@@ -159,7 +190,7 @@ if download_col.button(
     download_col.empty()
     download_col.download_button(
         "Download zip",
-        data=zipped(fs),
+        data=archive.dump(fs.collect()),
         file_name=file_name,
         mime="application/zip",
         width="stretch",
