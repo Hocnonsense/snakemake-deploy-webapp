@@ -530,7 +530,7 @@ def test_direct_entry_only_loads_refs_after_a_valid_repository(tmp_path, monkeyp
     assert picker.value == "owner/wf"
     assert picker.options.count("owner/wf") == 1
     assert all(field.key != "workflow-url" for field in at.text_input)
-    picker.set_value("Enter repository URL").run()
+    picker.set_value("Enter URL in text box").run()
     assert at.text_input(key="workflow-url").value == ""
     at.text_input(key="workflow-url").set_value("owner/wf").run()
     assert at.selectbox(key="workflow-source").value == "owner/wf"
@@ -546,7 +546,7 @@ def test_manual_repo_selection_keeps_catalog_ref_scoped(app, monkeypatch):
         )
 
     monkeypatch.setattr(GitHub, "repo_ref_cache", refs)
-    app.selectbox(key="workflow-source").set_value("Enter repository URL").run()
+    app.selectbox(key="workflow-source").set_value("Enter URL in text box").run()
     app.text_input(key="workflow-url").set_value("owner/second").run()
     assert not app.exception and not app.error
     assert app.selectbox(key="workflow-source").value == "owner/second"
