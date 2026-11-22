@@ -10,14 +10,13 @@ import streamlit as st
 from snakelit.editor.config import schema_config
 from snakelit.types import Ref
 from snakelit.version_picker import version_picker
-from snakelit.edit import edit_for
-from snakelit.file_explorer import FileExplorer
 from snakelit.filetypes import suffix
 from snakelit.merge import diff_files, render_merge
-from snakelit.utils.zip import ArchiveError, unzip, zipped
+from snakelit.utils import zip as archive
 from catalog_webapp.auth import render_auth
 from catalog_webapp.deploy import DeployError, deploy
-from catalog_webapp.editor import select_schema_edit
+from catalog_webapp.editor import edit_for, select_schema_edit
+from catalog_webapp.file_explorer import FileExplorer
 from catalog_webapp.fs import DeploymentFS
 from catalog_webapp.github import GitHub, GitHubError
 from catalog_webapp.publish import publish_form
@@ -69,8 +68,8 @@ if ref is None:
 def start_zip_merge(fs: DeploymentFS, name: str, data: bytes):
     """Compare an uploaded zip with ``fs``; return whether to rerun the page."""
     try:
-        incoming = unzip(data)
-    except ArchiveError as error:
+        incoming = archive.load(data)
+    except archive.ArchiveError as error:
         st.error(str(error))
         return False
     st.session_state["merge"] = (name, diff_files(fs, incoming))
@@ -118,6 +117,7 @@ if st.session_state.get("deploy-error"):
 result = st.session_state.get("deploy-result")
 if not result:
     st.stop()
+    assert False
 key: str = result["key"]
 if key != f"{repo}@{ref.sha}":
     last_ref = key.split("@", 1)[-1]
@@ -159,7 +159,7 @@ if download_col.button(
     download_col.empty()
     download_col.download_button(
         "Download zip",
-        data=zipped(fs),
+        data=archive.dump(fs.collect()),
         file_name=file_name,
         mime="application/zip",
         width="stretch",

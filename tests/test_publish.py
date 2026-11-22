@@ -19,7 +19,6 @@ from catalog_webapp.publish import (  # noqa: E402
     valid_branch,
 )
 from snakelit.types import Ref  # noqa: E402
-from snakelit.utils.zip import zipped  # noqa: E402
 
 REF = Ref("tag", "v1.0", "abc1234def")
 TARGET = {
@@ -69,11 +68,10 @@ def test_zip_contains_deployed_files_with_overrides():
     fs = DeploymentFS({"a.txt": b"A", "gone.txt": b"G"}, schemas=None)  # type: ignore
     fs.write("b/c.txt", b"C")
     fs.rm("gone.txt")
-
-    with zipfile.ZipFile(io.BytesIO(zipped(fs))) as archive:
-        assert sorted(archive.namelist()) == ["a.txt", "b/c.txt"]
-        assert archive.read("a.txt") == b"A"
-        assert archive.read("b/c.txt") == b"C"
+    files = fs.collect()
+    assert sorted(files) == ["a.txt", "b/c.txt"]
+    assert files["a.txt"] == b"A"
+    assert files["b/c.txt"] == b"C"
 
 
 def test_publish_branch_updates_an_existing_branch():

@@ -1,9 +1,8 @@
-# Snakemake deploy webapp
+Snakemake deploy webapp
+=======================
 
 A static [stlite](https://github.com/whitphx/stlite) app that deploys a Snakemake workflow from the catalog into a new GitHub repository, lets the user edit its configuration, and pushes the result.
-Streamlit runs in the browser via WebAssembly. GitHub can be accessed either
-through GitHub OAuth (recommended) or, as a fallback, with a personal access
-token that stays in `st.session_state`.
+Streamlit runs in the browser via WebAssembly. GitHub can be accessed through GitHub OAuth (recommended) or, as a fallback, with a personal access token that stays in `st.session_state`.
 
 The catalog links here with:
 
@@ -14,6 +13,7 @@ https://<host>/<repo>/?repo=<owner>/<name>&ref=<tag-or-branch>
 ## Architecture
 
 - `index.html` mounts stlite and builds `bootstrap.json` from the query string;
+- `oauth-component.html` render the OAuth control;
 - `app.py` is the Streamlit entrypoint;
 - `catalog_webapp/` contains the GitHub client, deployment, editing and publishing logic;
 - `snakelit` is consumed from PyPI and copied into the static bundle at build time, so the deployed code uses the same version as the lockfile.

@@ -1,18 +1,16 @@
-"""Config editing glue for the stlite app.
-
-``select_schema_edit`` wraps ``snakelit.editor.config.schema_config`` with the
-schema selector and error reporting the browser app needs.
-"""
+"""File editor dispatch and host schema selection."""
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING, Callable, Mapping
 
 import streamlit as st
+from snakelit.filetypes import BINARY_SUFFIXES, IMAGE_SUFFIXES, suffix
+from snakelit.utils import yaml
 
-from snakelit.utils.yaml import load
-
-from .deploy import Schemas
+if TYPE_CHECKING:
+    from .deploy import Schemas
+    from .fs import DeploymentFS
 
 
 def select_schema_edit(
@@ -24,6 +22,8 @@ def select_schema_edit(
     render a selector), the raw bytes of a fixed schema (no selector), or
     ``None`` (edit without a schema, also without a selector).
     """
+
+    from .deploy import Schemas
 
     def config_edit(path: str, data: bytes, key: str):
         errors: list[str] = []
@@ -50,7 +50,7 @@ def select_schema_edit(
         )
         for message in errors:
             st.error(message)
-        return data if updated is None else updated
+        return None if errors else updated
 
     return config_edit
 
@@ -58,7 +58,7 @@ def select_schema_edit(
 def _parse_schema(content: bytes):
     """Parse a schema file, returning ``(schema, error)``."""
     errors: list[str] = []
-    schema = load(content.decode("utf-8"), errors)
+    schema = yaml.load(content.decode("utf-8"), errors)
     if errors:
         return None, f"Invalid schema: {errors[0]}"
     if schema is None:
@@ -90,3 +90,55 @@ def _choose_schema(schemas: Schemas, file: str, key: str):
     if choice == "(none)":
         return
     return schemas.get(choice)
+
+
+Editor = Callable[[str, bytes, str], bytes | None]
+
+
+def edit_for(
+    path: str,
+    store: DeploymentFS,
+    key: str,
+    *,
+    editors: Mapping[str, Editor] | None = None,
+):
+    """Render ``path``'s editor and write the result back to ``store``.
+
+    The editor is chosen by suffix: a host-provided one from ``editors`` when
+    available, a plain text area for other text, nothing for images and
+    binaries.  A host editor returns changed bytes or None to skip the write.  Missing files start empty, so the
+    same call creates them; a successful change writes and reruns.
+    """
+    stored = store.read(path)
+    content = stored or b""
+    ext = suffix(path)
+    if editors and ext in editors:
+        edited = editors[ext](path, content, key)
+    elif ext in IMAGE_SUFFIXES or ext in BINARY_SUFFIXES:
+        return
+    else:
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            return
+        widget_key = f"{key}-text"
+
+        def save_text():
+            current = store.read(path)
+            if current != stored:
+                st.warning(
+                    "The file changed while you were editing. Its latest contents are shown."
+                )
+                return
+            data = st.session_state[widget_key].encode("utf-8")
+            if data != (current or b""):
+                store.write(path, data)
+
+        # Uploads and merges can replace an open file between renders.
+        if st.session_state.get(widget_key) != text:
+            st.session_state[widget_key] = text
+        st.text_area("Content", key=widget_key, height=420, on_change=save_text)
+        return
+    if edited is not None:
+        store.write(path, edited)
+        st.rerun()

@@ -62,7 +62,10 @@
 
       mount(
         {
-          requirements: ["polars", "pyyaml", "jsonschema"],
+          requirements: [
+            "polars", "pyyaml", "jsonschema",
+            "streamlit-ace==0.1.1", "streamlit-tags==1.2.8", "streamlit-sortables==0.3.1",
+          ],
           entrypoint: "app.py",
           files,
           streamlitConfig: {
