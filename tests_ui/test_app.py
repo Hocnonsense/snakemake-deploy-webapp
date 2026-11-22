@@ -536,17 +536,22 @@ def test_direct_entry_only_loads_refs_after_a_valid_repository(tmp_path, monkeyp
     assert at.selectbox(key="workflow-source").value == "owner/wf"
     assert at.selectbox(key="workflow-source").options.count("owner/wf") == 1
 
+
 def test_manual_repo_selection_keeps_catalog_ref_scoped(app, monkeypatch):
     def refs(self, repo):
         if repo == "owner/wf":
             return _load
-        return lambda kind: [Ref("branch", "main", "bbbbbbb")] if kind == "branch" else []
+        return lambda kind: (
+            [Ref("branch", "main", "bbbbbbb")] if kind == "branch" else []
+        )
 
     monkeypatch.setattr(GitHub, "repo_ref_cache", refs)
     app.selectbox(key="workflow-source").set_value("Enter repository URL").run()
     app.text_input(key="workflow-url").set_value("owner/second").run()
     assert not app.exception and not app.error
     assert app.selectbox(key="workflow-source").value == "owner/second"
-    assert app.button(key="ref-picker-owner/second-anon-kind-branch").label.startswith("main")
+    assert app.button(key="ref-picker-owner/second-anon-kind-branch").label.startswith(
+        "main"
+    )
     app.selectbox(key="workflow-source").set_value("owner/wf").run()
     assert app.button(key="ref-picker-owner/wf-anon-kind-tag").label.startswith("v1.0")
